@@ -1,18 +1,25 @@
 module.exports = function(RED) {
   var odbc = require('odbc');
   var mustache = require('mustache');
-  //const process = require('process');
 
   function odbcConfig(config) {
     RED.nodes.createNode(this, config);
 
-    // Pass a poolConfig object to the odbc.pool function. If the values are not
-    // set on the config object, they will get set to `undefined`, in which case
-    // odbc.pool will set them to the defaults during its execution.
     this.poolConfig = config;
+
+    let keys = Object.keys(this.poolConfig);
+    let key;
+    for (let y = 0; y < keys.length; y++){
+      key = this.poolConfig[keys[y]];
+      this.warn(key);
+      this.warn(parseFloat(key) );
+      if (!isNaN(key)){
+        this.poolConfig[keys[y]] = parseFloat(key);
+      }
+    }
     this.pool = null;
     this.connecting = false;
-
+    this.warn(this.poolConfig);
     this.connect = async () => {
 
       let connection;
@@ -45,22 +52,19 @@ module.exports = function(RED) {
     this.parameters = config.parameters;
     this.outfield = config.outField;
     this.name = config.name;
-
     this.runQuery = async function(message, send, done) {
       let connection;
-
       try {
         connection = await this.poolNode.connect();
       } catch (error) {
         if (error) {
           this.error(error);
-          this.status({fill: "red", shape: "ring", text: error.message});
           if (done) {
             // Node-RED 1.0 compatible
             done(error);
           } else {
             // Node-RED 0.x compatible
-            node.error(error, message);
+            this.error(error, message);
           }
         }
       }
@@ -71,19 +75,15 @@ module.exports = function(RED) {
         text:"querying..."
       });
 
-      let parameters = undefined;
+      let parameters;
       let result;
 
-      if (message.payload) {
+      this.queryString = mustache.render(this.queryString, message);
 
-        // If the payload is a string, convert to JSON object and get the query
-        // and/or parameters
-        if (typeof message.payload == 'string')
-        {
+      if (message.payload) {
+        if (typeof message.payload == 'string'){
           let payloadJSON;
           try {
-            // string MUST be valid JSON, else fill with error.
-            // TODO: throw error?
             payloadJSON = JSON.parse(message.payload);
           } catch (error) {
             this.status({fill: "red", shape: "ring", text: error.message});
@@ -93,23 +93,36 @@ module.exports = function(RED) {
               done(error);
             } else {
               // Node-RED 0.x compatible
-              node.error(error, message);
+              this.error(error, message);
             }
           }
-          parameters = payloadJSON.parameters || this.parameters;
+          if(payloadJSON.query){
+            if(typeof payloadJSON.query != 'string'){
+              this.error("Error. Object msg.query must be a string.");
+              connection.close();
+              return;
+            }
+          }
           this.queryString = payloadJSON.query || this.queryString;
         }
 
         // If the payload is an object, get the query and/or parameters directly
         // from the object
         else if (typeof message.payload == 'object') {
-          parameters = message.payload.parameters || this.parameters;
           this.queryString = message.payload.query || this.queryString;
         }
       }
 
+      if(!this.queryString){
+        error = "Error. The query string is empty.";
+        this.status({fill: "red", shape: "ring",text: error});
+        this.error(error);
+        connection.close();
+        return;
+      }
+
       try {
-        result = await connection.query(this.queryString, parameters);
+        result = await connection.query(this.queryString);
       } catch (error) {
         this.error(error);
         this.status({fill: "red", shape: "ring", text: error.message});
@@ -119,27 +132,58 @@ module.exports = function(RED) {
           done(error);
         } else {
           // Node-RED 0.x compatible
-          node.error(error, message);
+          this.error(error, message);
         }
       }
-
       connection.close();
+
+      let adrArray = [];
+
       if (!this.outfield){
         message.payload = result;}
       else {
-        if (this.outfield.search(",") != -1 || this.outfield.search(".") != -1 this.outfield.search(":") != -1 this.outfield.search(";") != -1){
-          node.error("The output string contains a punctuation error.");
+        if(typeof this.outfield != 'string'){
+          error = "Error. The output field must be a string."
+          this.status({fill: "red", shape: "ring", text: error});
+          this.error(error);
+          connection.close();
+          return;
+        }
+        if (this.outfield.search(",") != -1  || this.outfield.search("'") != -1  || this.outfield.search(":") != -1 || this.outfield.search(";") != -1){
+          error = "The output string contains a punctuation error.";
+          this.error(error);
+          this.status({fill: "red", shape: "ring", text: error});
+          connection.close();
           return;}
         if (this.outfield.charAt(0) == "." || this.outfield.charAt(this.outfield.length-1) == "."){
-          node.error("The output string shouldn't begin or end with a period.");
+          error = "The output string shouldn't begin or end with a period.";
+          this.error(error);
+          this.status({fill: "red", shape: "ring", text: error});
+          connection.close();
           return;}
-        let str = "[" + this.outfield.replace(/./g, ",") + "]";
-        let adrArray = JSON.parse(str);
-        let outObj = result;
-        for (let i = adrArray.length -1; i >= 0; i++){
-          outObj = {adrArray[i]:outObj};
+        let str = "[\"" + this.outfield.replace(".", "\",\"") + "\"]";
+        try {
+          adrArray = JSON.parse(str);
+        } catch (error) {
+          this.status({fill: "red", shape: "ring", text: error.message});
+          connection.close();
+          if (done) {
+            // Node-RED 1.0 compatible
+            done(error);
+          } else {
+            // Node-RED 0.x compatible
+            this.error(error, message);
+          }
         }
-        message = outObj;      }
+
+
+        let outObj = result;
+        for (let i = adrArray.length -1; i >= 0; i--){
+          outObj = {[adrArray[i]]:outObj};
+        }
+        message = {...message, ...outObj};
+      }
+
       send(message);
       connection.close();
       this.status({fill:'green',shape:'dot',text:'ready'});

@@ -4,14 +4,13 @@
     defaults: {
       connectionString: {value:"", required:true},
       name: {value:""},
-      initialsize: {value:5},
-      incrementsize: {value:5},
-      maxsize: {value:15},
+      initialSize: {value:5},
+      incrementSize: {value:5},
+      maxSize: {value:15},
+      shrink:{value:true},
+      connectionTimeout:{value:3},
+      loginTimeout:{value:3}
     },
-    credentials: {
-            username: {type:"text"},
-            password: {type:"password"}
-        },
     label: function() {
       return this.name || 'ODBC CONFIG';
     }
@@ -21,7 +20,7 @@
 <script type="text/html" data-template-name="ODBC CONFIG">
 
   <div class="form-row">
-    <label for="node-config-input-name"><i class="fa fa-tag"></i> Connection String</label>
+    <label for="node-config-input-name"><i class="fa fa-tag"></i> Name</label>
     <input type="text" id="node-config-input-name">
   </div>
 
@@ -31,50 +30,40 @@
   </div>
 
   <div class="form-row">
-    <label for="node-config-input-username"><i class="fa fa-user"></i> Username</label>
-    <input type="text" id="node-config-input-username">
-
-  </div>
-  <div class="form-row">
-      <label for="node-config-input-password"><i class="fa fa-lock"></i> Password</label>
-      <input type="password" id="node-config-input-password">
+    <label for="node-config-input-initialSize"><i class="icon-bookmark"></i>Initial Size</label>
+    <input type="number" id="node-config-input-initialSize" placeholder="5">
   </div>
 
   <div class="form-row">
-    <label for="node-config-input-initialsize"><i class="icon-bookmark"></i>Initial Size</label>
-    <input type="number" id="node-config-input-initialsize" placeholder="5">
+    <label for="node-config-input-incrementSize"><i class="icon-bookmark"></i>Increment Size</label>
+    <input type="number" id="node-config-input-incrementSize" placeholder="5">
   </div>
 
   <div class="form-row">
-    <label for="node-config-input-incrementsize"><i class="icon-bookmark"></i>Increment Size</label>
-    <input type="number" id="node-config-input-incrementsize" placeholder="5">
+    <label for="node-config-input-maxSize"><i class="icon-bookmark"></i>Max Size</label>
+    <input type="number" id="node-config-input-maxSize" placeholder="15">
   </div>
 
   <div class="form-row">
-    <label for="node-config-input-maxsize"><i class="icon-bookmark"></i>Max Size</label>
-    <input type="number" id="node-config-input-maxsize" placeholder="15">
+    <label for="node-config-input-shrink"><i class="icon-bookmark"></i>Shrink Pool</label>
+    <input type="checkbox" id="node-config-input-shrink" style="margin-left:0px; vertical-align:top; width:auto !important;"></input>
   </div>
 
   <div class="form-row">
-    <label for="node-config-input-maxsize"><i class="icon-bookmark"></i>Shrink Pool</label>
-    <button type="button" class="red-ui-button">On</button>
+    <label for="node-config-input-connectionTimeout"><i class="icon-bookmark"></i>Connection Timeout (sec)</label>
+    <input type="number" id="node-config-input-connectionTimeout" placeholder="3">
   </div>
 
   <div class="form-row">
-    <label for="node-config-input-connectiontimeout"><i class="icon-bookmark"></i>Connection Timeout (sec)</label>
-    <input type="number" id="node-config-input-connectiontimeout" placeholder="10">
-  </div>
-
-  <div class="form-row">
-    <label for="node-config-input-logintimeout"><i class="icon-bookmark"></i>Login Timeout (sec)</label>
-    <input type="number" id="node-config-input-logintimeout" placeholder="10">
+    <label for="node-config-input-loginTimeout"><i class="icon-bookmark"></i>Login Timeout (sec)</label>
+    <input type="number" id="node-config-input-loginTimeout" placeholder="3">
   </div>
 </script>
 
 <script type="text/javascript">
   RED.nodes.registerType('odbcmj',{
   category: 'storage',
-  color: '#8f34ad',
+  color: '#89A5C0',
   defaults: {
       name: {value:""},
       connection: {type:"ODBC CONFIG", required:true},
@@ -122,7 +111,7 @@
   </div>
   <div class="form-row">
     <label for="node-input-parameters"><i class="fa fa-question"></i> Parameters</label>
-    <input type="text" id="node-input-parameters" placeholder="[\"Value\", 123, ...]">
+    <input type="text" id="node-input-parameters" placeholder="['Value', 123, ...]">
   </div>
   <div class="form-row">
       <label for="node-input-outField"><i class="fa fa-edit"></i> Result to</label>
@@ -132,23 +121,4 @@
 
 <script type="text/html" data-help-name="odbcmj">
   <p>Node for running ODBC queries.</p>
-  <h3>Inputs</h3>
-    <dl class="message-properties">
-      <dt>payload
-        <span class="property-type">string | object</span>
-      </dt>
-      <dd>
-        <p>A valid JSON string or JavaScript object that can contain "query" and/or "parameter" properties.
-      </dd>
-    </dl>
-  <h3>Outputs</h3>
-      <dl class="message-properties">
-      <dt>payload
-        <span class="property-type">object</span>
-      </dt>
-      <dd>
-        An odbc result object (see the <a href=https://www.npmjs.com/package/odbc>odbc package docs</a>)
-      </dd>
-    </dl>
-   <h3>Details</h3>
 </script>
