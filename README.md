@@ -19,14 +19,14 @@ For the `odbc` connector requirements, please see [the documentation for that pa
 ---
 ## Usage
 
-`node-red-contrib-odbc` provides two nodes:
+`node-red-contrib-odbcmj` provides two nodes:
 
-* **`ODBC pool`**: A configuration node for defining your connection string and managing your connections parameters
-* **`ODBC query`**: A node for running queries with or without parameters passed using Mustache syntax
+* **`ODBC CONFIG`**: A configuration node for defining your connection string and managing your connections parameters
+* **`odbcmj`**: A node for running queries with or without parameters passed using Mustache syntax
 
-### `ODBC pool`
+### `ODBC CONFIG`
 
-A configuration node that manages connections in an `odbc.Pool` object. [Can take any configuration property recognized by `odbc.pool()`](https://www.npmjs.com/package/odbc#constructor-odbcpoolconnectionstring). The connection pool will initialize the first time a `ODBC query` node or `ODBC pool` node runs.
+A configuration node that manages connections in an `odbc.Pool` object. [Can take any configuration property recognized by `odbc.pool()`](https://www.npmjs.com/package/odbc#constructor-odbcpoolconnectionstring). The connection pool will initialize the first time a `odbcmj` node or `ODBC CONFIG` node runs.
 
 #### Properties
 
@@ -40,24 +40,70 @@ A configuration node that manages connections in an `odbc.Pool` object. [Can tak
   ```
 * (optional) **`initialSize`**: <`number`>
 
-  The number of connections created in the Pool when it is initialized
+  The number of connections created in the Pool when it is initialized.  Default: 5.
 
 * (optional) **`incrementSize`**: <`number`>
 
-  The number of connections that are created when the pool is exhausted
+  The number of connections that are created when the pool is exhausted. Default: 5.
 
 * (optional) **`maxSize`**: <`number`>
 
-  The maximum number of connections allowed in the pool before it won't create any more
+  The maximum number of connections allowed in the pool before it won't create any more. Default: 15.
 
 * (optional) **`shrinkPool`**: <`boolean`>
 
-  Whether the number of connections should be reduced to `initialSize` when they are returned to the pool
+  Whether the number of connections should be reduced to `initialSize` when they are returned to the pool. Default: true.
 
 * (optional) **`connectionTimeout`**: <`number`>
 
-  The number of seconds for a connection to remain idle before closing
+  The number of seconds for a connection to remain idle before closing.  Default: 3.
 
 * (optional) **`loginTimeout`**: <`number`>
 
-  The number of seconds for an attempt to create a connection before returning to the application
+  The number of seconds for an attempt to create a connection before returning to the application. Default: 3.
+
+### `odbcmj`
+
+A node that runs a query when input is received. This node can define its own query string, as well as take a query and/or parameters as input. A query sent as an input values will override any query defined in the node properties.
+
+#### Properties
+
+* (**required**) **`connection`**: <`ODBC CONFIG`>
+
+  The ODBC pool node that defines the connection settings and manages the connection pool used by this node
+
+* (optional) **`query`**: <`string`>
+
+  A valid SQL query string that can optionally contains parameters inserted using the Mustache syntax.  For exemple, msg.payload can be inserted anywhere in the string using {{{payload}}}.
+
+* (optional) **`output object`**: <`JSON object name`>
+
+  The JSON structure that will contain the result output.  The string must be a valid JSON object structure (ex: "payload.results") and must not start or end with a period.  The node input is carried out to the output, as long as the output object name does not conflit it.  If the targeted output JSON object was already present in the input, the result from the query will be appended to it, unless parts of the targeted input message were not object themselves, in which case they will be overwritten.
+
+  Example:
+
+    - input:   {"payload":
+                 {"result":
+                   {"othervalue": 10}
+                 }
+               };
+
+    - output:  payload.results.values
+
+    In this case, "values" will be appended to "result" wihout overwriting "othervalue".  If "result" had been a string, then it would have became an object and its content would have been lost.
+
+#### Inputs
+
+The `odbcmj` node accepts a `payload` input that is either a valid JSON string or a JavaScript object with `"query"` properties. This value, when passed on the payload, overrides the query node property.
+
+* (optional) **`payload.query`** <`string`>:
+
+  A valid SQL query string
+
+#### Outputs
+
+Sends a message as an `output object` (as defined above) that is the results from the query
+
+* **`output object`**: <`array`>
+
+  The [`odbc` Result array](https://www.npmjs.com/package/odbc#result-array) returned from the query.

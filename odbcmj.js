@@ -2,24 +2,23 @@ module.exports = function(RED) {
   var odbc = require('odbc');
   var mustache = require('mustache');
 
+
+
   function odbcConfig(config) {
     RED.nodes.createNode(this, config);
 
     this.poolConfig = config;
 
     let keys = Object.keys(this.poolConfig);
-    let key;
+    let val;
     for (let y = 0; y < keys.length; y++){
-      key = this.poolConfig[keys[y]];
-      this.warn(key);
-      this.warn(parseFloat(key) );
-      if (!isNaN(key)){
-        this.poolConfig[keys[y]] = parseFloat(key);
+      val = this.poolConfig[keys[y]];
+      if (!isNaN(val)){
+        this.poolConfig[keys[y]] = parseFloat(val);
       }
     }
     this.pool = null;
     this.connecting = false;
-    this.warn(this.poolConfig);
     this.connect = async () => {
 
       let connection;
@@ -138,10 +137,12 @@ module.exports = function(RED) {
       connection.close();
 
       let adrArray = [];
-
       if (!this.outfield){
-        message.payload = result;}
-      else {
+        error = "Error. The output filed must not be empty."
+        this.status({fill: "red", shape: "ring", text: error});
+        this.error(error);
+        connection.close();
+        return;}
         if(typeof this.outfield != 'string'){
           error = "Error. The output field must be a string."
           this.status({fill: "red", shape: "ring", text: error});
@@ -161,7 +162,7 @@ module.exports = function(RED) {
           this.status({fill: "red", shape: "ring", text: error});
           connection.close();
           return;}
-        let str = "[\"" + this.outfield.replace(".", "\",\"") + "\"]";
+        let str = "[\"" + this.outfield.replaceAll(".", "\",\"") + "\"]";
         try {
           adrArray = JSON.parse(str);
         } catch (error) {
@@ -176,13 +177,56 @@ module.exports = function(RED) {
           }
         }
 
+        let inputArray = [];
+        let samelevel = 0;
 
-        let outObj = result;
-        for (let i = adrArray.length -1; i >= 0; i--){
-          outObj = {[adrArray[i]]:outObj};
+
+        function appendobj(objarray, init){
+            if (objarray.length == 1){
+              return {[objarray[0]]:init}
+            } else {
+              return {[objarray.shift()]:appendobj(objarray, init)};
+            }
         }
-        message = {...message, ...outObj};
-      }
+
+
+        function iterateObject(obj, inputArray, adrArray, result) {
+          let gotone = false;
+          let inchild = false;
+          let keys = Object.keys(obj);
+          for(let z = 0; z < keys.length && !gotone; z++) {
+            let childobj = obj[keys[z]];
+            let childkey = keys[z];
+            if (adrArray[samelevel] == childkey){
+              gotone = true;
+              inputArray.push(childkey);
+              samelevel++;
+              if (typeof(thisobj) == "object"){
+                inchild = iterateObject(childobj, inputArray, adrArray, result);
+              }
+            }
+          }
+          if(!inchild){
+            let leftover = adrArray.slice();
+            for (let g = 0; g < samelevel; g++){
+              if(leftover.length > 0) {leftover.shift()}
+            }
+            if(leftover.length > 0){result = appendobj(leftover, result);}
+            if (samelevel == 0){
+              obj[Object.keys(result)[0]] = result[Object.keys(result)[0]];
+            }
+            else if (typeof(obj[inputArray[samelevel-1]]) == "object" && leftover.length !=0){
+              obj[inputArray[samelevel-1]] = {...obj[inputArray[samelevel-1]],...result};
+            } else {
+              obj[inputArray[samelevel-1]] = result;
+            }
+          }
+          return gotone;
+        }
+
+        iterateObject(message, inputArray, adrArray, result);
+
+
 
       send(message);
       connection.close();
