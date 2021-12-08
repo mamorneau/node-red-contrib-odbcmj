@@ -1,17 +1,17 @@
 {
   "name": "node-red-contrib-odbcmj",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Node Red implementation of odbc.js",
   "keywords": [
     "node-red",
     "odbc",
     "SQL",
-    "query",
-    "mj"
+    "query"
   ],
   "dependencies": {
     "odbc": "latest",
-    "mustache": "latest"
+    "mustache": "latest",
+    "node-sql-parser": "latest"
   },
   "node-red": {
     "nodes": {
@@ -21,9 +21,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "license": "ISC",
-  "author": {
-    "name" : "Marc-André Morneau",
-    "email" : "ma.morneau.1@gmail.com"
-  }
+  "license": "Apache 2",
+  "author": "Marc-André Morneau <ma.morneau.1@gmail.com>",
+  "main": "odbcmj.js",
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mamorneau/node-red-contrib-odbcmj.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mamorneau/node-red-contrib-odbcmj/issues"
+  },
+  "homepage": "https://github.com/mamorneau/node-red-contrib-odbcmj#readme"
 }

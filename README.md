@@ -3,6 +3,18 @@
 A Node Red implementation of odbc.js (https://www.npmjs.com/package/odbc).  This Node allows to make queries to a database through an ODBC connection.  Additionally, parameters can be passed to the SQL query using Mustache syntax.
 
 ---
+## Acknowledgement
+
+This node is an unofficial fork of node-red-contrib-odbc from Mark Irish (https://github.com/markdirish/node-red-contrib-odbc) and vastly inspires from it.  It also takes ideas from node-red-contrib-odbc2 from AIS Automation (https://github.com/AISAutomation/node-red-contrib-odbc2).  Overall changes:
+
+  - Use mustache instead of a parameters array.
+  - Fixes the output field option.
+  - Fixes the checkbox for the pool shrink option.
+  - Uses ace/mode/sql for the SQL input field.
+  - Connection nodes can have individually defined names
+
+#### This package will not be activaly maintained.  Use it at your own risks.
+---
 ## Installation
 
 There are two ways to download this package:
@@ -74,7 +86,7 @@ A node that runs a query when input is received. This node can define its own qu
 
 * (optional) **`query`**: <`string`>
 
-  A valid SQL query string that can optionally contains parameters inserted using the Mustache syntax.  For exemple, msg.payload can be inserted anywhere in the string using {{{payload}}}.
+  A valid SQL query string that can optionally contains parameters inserted using the Mustache syntax.  For exemple, msg.payload can be inserted anywhere in the string using {{{payload}}}.  The node will accept a query that is passed either as msg.query, msg.payload.query or msg.payload if payload is a stringified JSON containing a query object.
 
 * (optional) **`output object`**: <`JSON object name`>
 
