@@ -8,11 +8,23 @@
       incrementSize: {value:5},
       maxSize: {value:15},
       shrink:{value:true},
+      syntaxtick:{value:false},
+      syntax: {value:"mysql"},
       connectionTimeout:{value:3},
       loginTimeout:{value:3}
     },
     label: function() {
       return this.name || 'ODBC CONFIG';
+    },
+    oneditprepare: function() {
+      $(".input-syntax").hide();
+      $("#node-config-input-syntaxtick").change(function() {
+        if (this.checked){
+          $(".input-syntax").show();
+        } else {
+          $(".input-syntax").hide();
+        }
+      });
     }
   });
 </script>
@@ -58,6 +70,26 @@
     <label for="node-config-input-loginTimeout"><i class="icon-bookmark"></i>Login Timeout (sec)</label>
     <input type="number" id="node-config-input-loginTimeout" placeholder="3">
   </div>
+
+  <div class="form-row">
+    <label for="node-config-input-syntaxtick"><i class="icon-bookmark"></i>Syntax Checker</label>
+    <input type="checkbox" id="node-config-input-syntaxtick" style="margin-left:0px; vertical-align:top; width:auto !important;"></input>
+  </div>
+
+  <div class="form-row input-syntax">
+    <label for=""><i class="icon-bookmark"></i> Syntax</label>
+    <select id="node-config-input-syntax" style="width: 70%">
+        <option value="bigquery">BigQuery</option>
+        <option value="db2">DB2</option>
+        <option value="hive">Hive</option>
+        <option value="mariadb">MariaDB</option>
+        <option value="mysql">Mysql</option>
+        <option value="postgresql">PostgresQL</option>
+        <option value="sqlite">Sqlite</option>
+        <option value="transactsql">TransactSQL</option>
+        <option value="flinksql">FlinkSQL</option>
+    </select>
+</div>
 </script>
 
 <script type="text/javascript">

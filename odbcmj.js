@@ -2,10 +2,6 @@ module.exports = function(RED) {
   //----Required modules
   var odbc = require('odbc');
   var mustache = require('mustache');
-  var { Parser } = require('node-sql-parser');
-  const sql = new Parser()
-  const ast = sql.astify('SELECT * FROM t'); // mysql sql grammer parsed by default
-
 
   //----This function creates a JSON structure based on keys passed in an array.  The init value is associated to the last key.
   //----This function is needed later on.
@@ -22,6 +18,11 @@ module.exports = function(RED) {
     RED.nodes.createNode(this, config);
 
     this.poolConfig = config;
+    if (this.poolConfig.syntaxtick){
+      var { Parser } = require('node-sql-parser/build/' + this.poolConfig.syntax);
+      const sql = new Parser();
+    }
+
     //----Converting numeric configuration parameters to actual number instead of string.  String numbers not yet tested with odbc.js.
     //----ToDo: Test to veridy that we can remove this.
     let keys = Object.keys(this.poolConfig);
@@ -64,8 +65,8 @@ module.exports = function(RED) {
   function odbcmj(config) {
     RED.nodes.createNode(this, config);
     //----Retrieves the specific configuratio node.
+    this.syntaxtick = config.syntaxtick;
     this.poolNode = RED.nodes.getNode(config.connection);
-    this.parameters = config.parameters;
     this.outfield = config.outField;
     this.name = config.name;
 
@@ -95,7 +96,7 @@ module.exports = function(RED) {
       let result;
       let error;
 
-      //---Re-fetching queryString here since it can change because of Mustache without the node changing itself. 
+      //---Re-fetching queryString here since it can change because of Mustache without the node changing itself.
       this.queryString = config.query;
       //---Replace the mustaches tags with the appropriate values from the input message.
       this.queryString = mustache.render(this.queryString, message);
@@ -141,16 +142,17 @@ module.exports = function(RED) {
         return;
       }
       //----Check if the query string is a syntaxically valid SQL query
-      try {
-        sql.parse(this.queryString);
+      if(this.syntaxtick){
+        try {
+          sql.parse(this.queryString);
+        }
+        catch (error) {
+          this.error(error);
+          connection.close();
+          this.status({fill: "red", shape: "ring", text: error});
+          return;
+        }
       }
-      catch (error) {
-        this.error(error);
-        connection.close();
-        this.status({fill: "red", shape: "ring", text: error});
-        return;
-      }
-
       let outputArray = [];
       //---If no output object was specified.
       if (!this.outfield){
@@ -207,7 +209,6 @@ module.exports = function(RED) {
       try {
         result = await connection.query(this.queryString);
       } catch (error) {
-        this.error(error);
         this.status({fill: "red", shape: "ring", text: error.message});
         connection.close();
         if (done) {done(error);}
