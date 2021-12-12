@@ -34,7 +34,9 @@ For the `odbc` connector requirements, please see [the documentation for that pa
 `node-red-contrib-odbcmj` provides two nodes:
 
 * **`ODBC CONFIG`**: A configuration node for defining your connection string and managing your connections parameters
+
 * **`odbcmj`**: A node for running queries with or without parameters passed using Mustache syntax
+
 
 ### `ODBC CONFIG`
 
@@ -90,23 +92,23 @@ A node that runs a query when input is received. This node can define its own qu
 
 * (optional) **`output object`**: <`JSON object name`>
 
-  The JSON structure that will contain the result output.  The string must be a valid JSON object structure (ex: "payload.results") and must not start or end with a period.  The node input is carried out to the output, as long as the output object name does not conflit it.  If the targeted output JSON object was already present in the input, the result from the query will be appended to it, unless parts of the targeted input message were not object themselves, in which case they will be overwritten.
+  The JSON structure that will contain the result output.  The string must be a valid JSON object structure (ex: `payload.results`) and must not start or end with a period.  The node input is carried out to the output, as long as the output object name does not conflit it.  If the targeted output JSON object was already present in the input, the result from the query will be appended to it, unless parts of the targeted input message were not object themselves, in which case they will be overwritten.
 
   Example:
 
-    - input:   {"payload":
+    - `input:   {"payload":
                  {"result":
                    {"othervalue": 10}
                  }
-               };
+               };`
 
-    - output:  payload.results.values
+    - `output:  payload.results.values`
 
-    In this case, "values" will be appended to "result" wihout overwriting "othervalue".  If "result" had been a string, then it would have became an object and its content would have been lost.
+    In this case, `values` will be appended to `result` wihout overwriting `othervalue`.  If `result` had been a string, then it would have became an object and its content would have been lost.
 
 #### Inputs
 
-The `odbcmj` node accepts a `payload` input that is either a valid JSON string or a JavaScript object with `"query"` properties. This value, when passed on the payload, overrides the query node property.
+The `odbcmj` node accepts a `payload` input that is either a valid JSON string or a JavaScript object with `query` properties. This value, when passed on the payload, overrides the query node property.
 
 * (optional) **`payload.query`** <`string`>:
 

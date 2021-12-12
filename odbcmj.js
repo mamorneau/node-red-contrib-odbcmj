@@ -65,7 +65,6 @@ module.exports = function(RED) {
     RED.nodes.createNode(this, config);
     //----Retrieves the specific configuratio node.
     this.poolNode = RED.nodes.getNode(config.connection);
-    this.queryString = config.query;
     this.parameters = config.parameters;
     this.outfield = config.outField;
     this.name = config.name;
@@ -96,9 +95,10 @@ module.exports = function(RED) {
       let result;
       let error;
 
+      //---Re-fetching queryString here since it can change because of Mustache without the node changing itself. 
+      this.queryString = config.query;
       //---Replace the mustaches tags with the appropriate values from the input message.
       this.queryString = mustache.render(this.queryString, message);
-
       //---Handles the case were the received message is a stringified JSON containing a valid query.
       if (message.payload) {
         if (typeof message.payload == 'string'){
