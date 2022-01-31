@@ -219,6 +219,7 @@ module.exports = function(RED) {
 
       let inputArray = [];
       let sameLevel = 0;
+      let type = 0;
       //----This function will iterate over the result object obtained above and will try to merge it with the JSON structure of the input message, if possible.
       function iterateObject(obj, inputArray, outputArray, result) {
         let match = false;
@@ -253,13 +254,30 @@ module.exports = function(RED) {
           //----First case, the input and output JSON are completly different.
           //----If the output structure is shorter or equal in length than the input structure and if the last target level is an object to which the result could be appended (if the last key of the output structure still match the key in the input structure).
           //else if (typeof(obj[inputArray[sameLevel-1]]) == "object" && leftover.length !=0){
-          if (sameLevel == 0 || (typeof(obj == "object") && leftover.length !=0)){
+          if (sameLevel == 0){
             let keyMerge = Object.keys(result)[0];
             obj[keyMerge] = result[keyMerge];
-          }
-          //----If the output structure is equal or longuer than the input structure and the last involved key in the input is not an object.  This case is destructive; the last involved key in the input strcuture will be overwriten to an object containing the rest of the output structure.
-          else {
-            obj[inputArray[sameLevel-1]] = result;
+            type = 1; //ok
+          } else {
+            if (leftover.length !=0){
+              if(!obj.hasOwnProperty(inputArray[sameLevel-1])){
+                obj[leftover[0]] = result[leftover[0]];
+                type = 2; //ok
+              } else {
+                obj[inputArray[sameLevel-1]] = result; //ok
+                type = 3;
+              }
+            } else {
+              if(!obj.hasOwnProperty(inputArray[sameLevel-1])){ //ok
+                for (let y = 0; y < result.length; y++){
+                  obj[y] = result[y];
+                  type = 4;
+                }
+              } else {
+                obj[inputArray[sameLevel-1]] = result; //ok
+                type = 5;
+              }
+            }
           }
         }
         return match;
@@ -269,7 +287,9 @@ module.exports = function(RED) {
       //----Actually calling the function to process the original result and sending the computed message.
       iterateObject(message, inputArray, outputArray, result);
       send(message);
-
+      this.error(type);
+      this.error(sameLevel);
+      this.error(inputArray);
       connection.close();
       this.status({fill:'green',shape:'dot',text:'ready'});
       if (done) {
