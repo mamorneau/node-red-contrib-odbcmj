@@ -18,12 +18,13 @@ module.exports = function(RED) {
     RED.nodes.createNode(this, config);
 
     this.poolConfig = config;
+    //----Check if the user ticked the syntax checker and if so we create a parser object based on the specified syntax.
     if (this.poolConfig.syntaxtick){
       var { Parser } = require('node-sql-parser/build/' + this.poolConfig.syntax);
       const sql = new Parser();
     }
 
-    //----Converting numeric configuration parameters to actual number instead of string.  String numbers not yet tested with odbc.js.
+    //----Converting numeric configuration parameters to actual number instead of string.  String-based numbers not yet tested with odbc.js.
     //----ToDo: Test to veridy that we can remove this.
     let keys = Object.keys(this.poolConfig);
     let val;
@@ -67,13 +68,13 @@ module.exports = function(RED) {
     //----Retrieves the specific configuratio node.
     this.syntaxtick = config.syntaxtick;
     this.poolNode = RED.nodes.getNode(config.connection);
-    this.outfield = config.outField;
+    this.outfield = config.outfield;
     this.name = config.name;
 
 
 
 
-    //The runQuery function hadnles the actual query to the database using odbc.js.  It also do a fewq verifications and transforms the reply from the database.
+    //The runQuery function handles the actual query to the database using odbc.js.  It also does a few verifications and transforms the reply from the database.
     this.runQuery = async function(message, send, done) {
       let connection;
       //---Retrieving one connection from the pool.
@@ -83,9 +84,9 @@ module.exports = function(RED) {
         if (error) {
           this.error(error);
           if (done) {done(error);}
+          return;
         }
       }
-
       //---Changing node status.
       this.status({
         fill:"blue",
@@ -96,7 +97,7 @@ module.exports = function(RED) {
       let result;
       let error;
 
-      //---Re-fetching queryString here since it can change because of Mustache without the node changing itself.
+      //---Re-fetching queryString here since it can change because of Mustache even if the node itself doesn't change.
       this.queryString = config.query;
       //---Replace the mustaches tags with the appropriate values from the input message.
       this.queryString = mustache.render(this.queryString, message);
@@ -125,14 +126,13 @@ module.exports = function(RED) {
         }
       }
       //----Case were the query is in the message, not in the payload.
-      if (message.query) {
+      else if (message.query) {
         this.queryString = message.query || this.queryString;
       }
       //----Case were the query is in the payload, not in the messsage.
-      if (typeof message.payload == 'object') {
+      else if (typeof message.payload == 'object') {
         this.queryString = message.payload.query || this.queryString;
       }
-
       //----Case were there was no query pased to the node.
       if(!this.queryString){
         error = "Error. The query string is empty.";
@@ -153,7 +153,7 @@ module.exports = function(RED) {
           return;
         }
       }
-      let outputArray = [];
+
       //---If no output object was specified.
       if (!this.outfield){
         error = "Error. The output filed must not be empty.";
@@ -170,7 +170,7 @@ module.exports = function(RED) {
         connection.close();
         return;
       }
-      //----If the output string contains illegal punctation.
+      //----If the output string contains illegal punctuation.
       if (this.outfield.search(",") != -1  || this.outfield.search("'") != -1  || this.outfield.search(":") != -1 || this.outfield.search(";") != -1){
         error = "The output string contains a punctuation error.";
         this.error(error);
@@ -178,7 +178,7 @@ module.exports = function(RED) {
         connection.close();
         return;
       }
-      //----If ouput string starts or end with a period (usually because the user left one there inadvertently)
+      //----If ouput string starts or ends with a period (usually because the user left one there inadvertently)
       if (this.outfield.charAt(0) == "." || this.outfield.charAt(this.outfield.length-1) == "."){
         error = "The output string shouldn't begin or end with a period.";
         this.error(error);
@@ -186,24 +186,15 @@ module.exports = function(RED) {
         connection.close();
         return;
       }
-      //----Try to pare the output string into an array.
-      let str = "[\"" + this.outfield.replace(/\./g, "\",\"") + "\"]";
+      //----Try to parse the output string into an stringified array of strings.
+      let outputArray = [];
       try {
-        outputArray = JSON.parse(str);
+        outputArray = this.outfield.split(".");
       } catch (error) {
         this.status({fill: "red", shape: "ring", text: error.message});
         connection.close();
         if (done) {done(error);}
       }
-      //----Is the result actually an array?
-      if (!Array.isArray(outputArray)){
-        error = "The output string didn't compute into an array.";
-        this.error(error);
-        this.status({fill: "red", shape: "ring", text: error});
-        connection.close();
-        return;
-      }
-
 
       //----Actual attempt to send the query to the ODBC driver.
       try {
@@ -216,73 +207,38 @@ module.exports = function(RED) {
       //----If successful, close the connection.
       connection.close();
 
-
       let inputArray = [];
       let sameLevel = 0;
-      let processAbove = false;
-      //----This function will iterate over the result object obtained above and will try to merge it with the JSON structure of the input message, if possible.
+
+      //----IMPORTANT.  This function will iterate over the result object obtained above and will merge it with the JSON structure of the input message.
       function iterateObject(obj, inputArray, outputArray, result) {
-        let match = false;
-        let inChild = false;
-        //----All keys in the currect object
-        let keys = Object.keys(obj);
-        //----CHeck if the current object contains a input key that matches an output key at this level of the structure.
-        for(let z = 0; z < keys.length && !match; z++) {
-          let childObj = obj[keys[z]];
-          let childKey = keys[z];
-          if (outputArray[sameLevel] == childKey){
-            match = true;
-            inputArray.push(childKey);
-            //----Will allow to continue to the next level of the structure, if the next level is an object.
+        //----Check if the current object contains a input key that matches an output key at this level of the structure.
+        if (typeof(obj[outputArray[sameLevel]]) == "object" && sameLevel < outputArray.length -1 ){
+          inputArray.push(outputArray[sameLevel]);
+          if(obj[outputArray[sameLevel]].hasOwnProperty(outputArray[sameLevel+1])){
             sameLevel++;
-            if (typeof(childObj) == "object"){
-              inChild = iterateObject(childObj, inputArray, outputArray, result);
-            }
+            iterateObject(obj[outputArray[sameLevel -1]], inputArray, outputArray, result);
           }
-        }
-        //----If the next level is not an object or if it is an object but doesn't contains the expected key from the output JSON structure.
-        if(!inChild && !answered){
-          answered = true;
-          //----Finding keys in the output structure that go beyong the input structure.
+        } else { //If the next level is not an object or if we have reached the end of the output JSON structure, it means it's time to merge the objects
           let leftover = outputArray.slice();
           for (let g = 0; g < sameLevel; g++){
             if(leftover.length > 0) {leftover.shift();}
           }
           //----If the above returns any key, we generate an actual JSON structure, ending with the result array from the query.
-          if(leftover.length > 0){result = appendobj(leftover, result);}
-          //----We handle different scenarios to make sure that the merge preserves as much of the original structure as possible.
-          if (sameLevel == 0){
-            let keyMerge = Object.keys(result)[0];
-            obj[keyMerge] = result[keyMerge];//ok
+          if(leftover.length > 0){result = appendobj(leftover, result);
+            obj[outputArray[sameLevel]] = result[outputArray[sameLevel]];
           } else {
-            if (leftover.length !=0){
-              if(!obj.hasOwnProperty(inputArray[sameLevel-1])){
-                obj[leftover[0]] = result[leftover[0]]; //ok
-              } else {
-                obj[inputArray[sameLevel-1]] = result; //ok
-              }
-            } else {
-              if(!obj.hasOwnProperty(inputArray[sameLevel-1])){ //ok
-                processAbove = true;
-              } else {
-                obj[inputArray[sameLevel-1]] = result; //ok
-              }
-            }
+            obj[outputArray[sameLevel]] = result;
           }
         }
-        else if(processAbove){
-          processAbove = false;
-          obj[inputArray[sameLevel-1]] = result;
-        }
-        return match;
       }
 
-      let answered = false;
+
       //----Actually calling the function to process the original result and sending the computed message.
       iterateObject(message, inputArray, outputArray, result);
       send(message);
       connection.close();
-      this.status({fill:'green',shape:'dot',text:'ready'});
+      this.status({fill:'blue',shape:'dot',text:'finish'});
       if (done) {
         done();
       }
