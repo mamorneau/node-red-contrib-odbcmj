@@ -9,9 +9,10 @@
     "query"
   ],
   "dependencies": {
-    "odbc": "latest",
+    "mocha": "^10.0.0",
     "mustache": "latest",
-    "node-sql-parser": "latest"
+    "node-sql-parser": "latest",
+    "odbc": "latest"
   },
   "node-red": {
     "nodes": {
@@ -19,12 +20,17 @@
     }
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha \"test/**/*_test.js\"",
+    "test-with-coverage": "nyc --reporter=lcov mocha \"test/**/*_test.js\""
   },
   "license": "Apache 2",
   "author": "Marc-André Morneau <ma.morneau.1@gmail.com>",
   "main": "odbcmj.js",
-  "devDependencies": {},
+  "devDependencies": {
+    "node-red": "^3.0.2",
+    "node-red-node-test-helper": "^0.3.0",
+    "nyc": "^15.1.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mamorneau/node-red-contrib-odbcmj.git"
