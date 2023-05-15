@@ -4,6 +4,9 @@ var odbcmj = require("../odbcmj.js");
 
 helper.init(require.resolve('node-red'));
 const invalidConnectionString = "connectionTest";
+const validConnectionString = "host=localhost port=5432 dbname=NodeRedLinkTest user=postgres password=a5bN74282!"
+// const validConnectionString = "postgres://postgres:YourPassword@localhost:5432/YourDatabase";
+// const validConnectionString = "Server=localhost;Port=5432;User Id=postgres;Password=a5bN74282!;Database=NodeRedLinkTest;";
 describe('odbcmj Node', function () {
 
   beforeEach(function (done) {
@@ -52,6 +55,29 @@ describe('odbcmj Node', function () {
     var flow = [
         { id: "n1", type: "odbcmj", name: "odbcmj", connection: "configN1" },
         { id: "configN1", type: "ODBC CONFIG", connectionString: invalidConnectionString }
+    ];
+    helper.load(odbcmj, flow, function () {
+        const configN1 = helper.getNode("configN1");
+        const n1 = helper.getNode("n1");
+        n1.once("call:error", (call) => {
+            try {
+                const errors = helper.log().args.filter(function(evt) {
+                    return evt[0].level === 20;
+                });
+                errors[0][0].msg.should.have.a.property('message');
+                errors[0][0].msg.message.should.startWith("[odbc] Error connecting to the database");
+                done();
+            } catch(err) {
+                done(err);
+            }
+        });
+      n1.receive({ payload: "test" });
+    });
+  });
+  it('should succed if valid connection string', function (done) {
+    var flow = [
+        { id: "n1", type: "odbcmj", name: "odbcmj", connection: "configN1" },
+        { id: "configN1", type: "ODBC CONFIG", connectionString: validConnectionString }
     ];
     helper.load(odbcmj, flow, function () {
         const configN1 = helper.getNode("configN1");
