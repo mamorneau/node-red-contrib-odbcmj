@@ -14,7 +14,7 @@ This node is an unofficial fork of node-red-contrib-odbc from Mark Irish (https:
   - Connection nodes can have individually defined names
   - Selectable SQL syntax checker 
 
----
+
 ## Installation
 
 This package is not available from within the Node Red palette tool.  Instead, in your Node-RED user directory (usually ~/.node-red/), download through the `npm` utility:
@@ -24,7 +24,7 @@ This package is not available from within the Node Red palette tool.  Instead, i
 
 For the `odbc` connector requirements, please see [the documentation for that package](https://www.npmjs.com/package/odbc#requirements).
 
----
+
 ## Usage
 
 `node-red-contrib-odbcmj` provides two nodes:
