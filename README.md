@@ -1,28 +1,23 @@
 # node-red-contrib-odbcmj
 
-A Node Red implementation of odbc.js (https://www.npmjs.com/package/odbc).  This Node allows to make queries to a database through an ODBC connection.  Additionally, parameters can be passed to the SQL query using Mustache syntax.
+A Node Red implementation of odbc.js (https://www.npmjs.com/package/odbc).  This Node allows to make queries to a database through an ODBC connection.  Additionally, parameters can be passed to the SQL query using Mustache syntax or prepared statements.
 
 ---
 ## Acknowledgement
 
 This node is an unofficial fork of node-red-contrib-odbc from Mark Irish (https://github.com/markdirish/node-red-contrib-odbc) and vastly inspires from it.  It also takes ideas from node-red-contrib-odbc2 from AIS Automation (https://github.com/AISAutomation/node-red-contrib-odbc2).  Overall changes:
 
-  - Uses mustache instead of a parameter array.
-  - Fixes the output field option.
+  - Can mustache as well as a parameter array.
+  - Fixes the output field option so that nested object can be used.
   - Fixes the checkbox for the pool shrink option.
   - Uses ace/mode/sql for the SQL input field.
   - Connection nodes can have individually defined names
   - Selectable SQL syntax checker 
 
-#### This package will not be activaly maintained.  Use it at your own risks.
 ---
 ## Installation
 
-There are two ways to download this package:
-
-1. From the Node-RED ediot menu, select `Manage pallete`, then click the `Install` tab and search for this package.
-
-2. In your Node-RED user directory (usually ~/.node-red/), download through the `npm` utility:
+This package is not available from within the Node Red palette tool.  Instead, in your Node-RED user directory (usually ~/.node-red/), download through the `npm` utility:
     ```
     npm install node-red-contrib-odbcmj
     ```
@@ -34,20 +29,20 @@ For the `odbc` connector requirements, please see [the documentation for that pa
 
 `node-red-contrib-odbcmj` provides two nodes:
 
-* **`ODBC CONFIG`**: A configuration node for defining your connection string and managing your connections parameters
+* **`odbc config`**: A configuration node for defining your connection string and managing your connection parameters
 
-* **`odbcmj`**: A node for running queries with or without parameters passed using Mustache syntax
+* **`odbc`**: A node for running queries with or without parameters passed using Mustache syntax or using a parameter array.
 
 
-### `ODBC CONFIG`
+### `odbc config`
 
-A configuration node that manages connections in an `odbc.Pool` object. [Can take any configuration property recognized by `odbc.pool()`](https://www.npmjs.com/package/odbc#constructor-odbcpoolconnectionstring). The connection pool will initialize the first time a `odbcmj` node or `ODBC CONFIG` node runs.
+A configuration node that manages connections in an `odbc.pool` object. [Can take any configuration property recognized by `odbc.pool()`](https://www.npmjs.com/package/odbc#constructor-odbcpoolconnectionstring). The connection pool will initialize the first time an `odbc` node receives an input message.
 
 #### Properties
 
 * (**required**) **`connectionString`**: <`string`>
 
-  An ODBC connection string that defines your DSN and/or connection string options
+  An ODBC connection string that defines your DSN and/or connection string options.  Check your ODBC driver documentation for more information about valid connection strings.
 
   Example:
   ```
@@ -77,48 +72,58 @@ A configuration node that manages connections in an `odbc.Pool` object. [Can tak
 
   The number of seconds for an attempt to create a connection before returning to the application. Default: 3.
 
-### `odbcmj`
+* (optional) **`syntaxChecker`**: <`boolean`>
 
-A node that runs a query when input is received. This node can define its own query string, as well as take a query and/or parameters as input. A query sent as an input values will override any query defined in the node properties.
+  Whether the syntax validator is activeted or not. If activated, the query string will be [parsed](https://www.npmjs.com/package/node-sql-parser#create-ast-for-sql-statement) and appended as an object to the output message with a key named `parsedSql`.  Default: false.
+
+* (optional) **`syntax`**: <`string`>
+
+  Dropdown list of the available [SQL flavors available](https://www.npmjs.com/package/node-sql-parser#supported-database-sql-syntax). Default: mysql.
+
+### `odbc`
+
+A node that runs a query when input is received. Each instance of the node can define its own query string, as well as take a query and/or parameters as input. A query sent as an input message will override any query defined in the node properties.
 
 #### Properties
 
-* (**required**) **`connection`**: <`ODBC CONFIG`>
+* (**required**) **`connection`**: <`odbc config`>
 
-  The ODBC pool node that defines the connection settings and manages the connection pool used by this node
+  The ODBC pool node that defines the connection settings and manages the connection pool used by this node.
 
 * (optional) **`query`**: <`string`>
 
-  A valid SQL query string that can optionally contains parameters inserted using the Mustache syntax.  For exemple, msg.payload can be inserted anywhere in the string using {{{payload}}}.  The node will accept a query that is passed either as msg.query, msg.payload.query or msg.payload if payload is a stringified JSON containing a query object.
+  A valid SQL query string that can optionally contains parameters inserted using the Mustache syntax.  For exemple, msg.payload can be inserted anywhere in the string using triple curly brackets: `{{{payload}}}`.  The node will accept a query that is passed either as msg.query, msg.payload.query or msg.payload if payload is a stringified JSON containing a query key/value pair.  A query string passed from the input will override any query defined in the node properties.  Mustache syntax cannot be used with a query string passed from the input.
 
-* (optional) **`output object`**: <`JSON object name`>
+  Alternatively, the query string can be constructed as a prepared statement; that is with variables replaced by question marks: `SELECT * FROM test WHERE id = ?`.  The variables must then be passed to the input using `msg.params`.  This object must be an array containing the same number of element that there are `?` in the query string.  The parameters are inserted one by one, from left to right.
 
-  The JSON structure that will contain the result output.  The string must be a valid JSON object structure (ex: `payload.results`) and must not start or end with a period.  The node input is carried out to the output, as long as the output object name does not conflit it.  If the targeted output JSON object was already present in the input, the result from the query will be appended to it, unless parts of the targeted input message were not object themselves, in which case they will be overwritten.
+* (**required**) **`result to`**: <`dot-notation string`>
+
+  The JSON nested element structure that will contain the result output.  The string must be a valid JSON object structure using dot-notation, minus the `msg.` (ex: `payload.results`) and must not start or end with a period.  Square braquet notation is not allowed.  The node input object is carried out to the output, as long as the output object name does not conflict it.  If the targeted output JSON object was already present in the input, the result from the query will be appended to it if it was itself an object (but not an array), otherwise the original key/value pair will be overwritten.
 
   Example:
 
-    - `input:   {"payload":
-                 {"result":
-                   {"othervalue": 10}
-                 }
-               };`
+    - `input msg:   {"payload": {"result": {"othervalue": 10} } };`
 
-    - `output:  payload.results.values`
+    - `result to:  payload.results.values`
 
-    In this case, `values` will be appended to `result` wihout overwriting `othervalue`.  If `result` had been a string, then it would have became an object and its content would have been lost.
+    In this case, `values` will be appended to `result` wihout overwriting `othervalue`.  If `result` had been a string, then it would have replaced by `values`.
 
 #### Inputs
 
-The `odbcmj` node accepts a `payload` input that is either a valid JSON string or a JavaScript object with `query` properties. This value, when passed on the payload, overrides the query node property.
+The `odbc` node accepts a message input that is either:
 
-* (optional) **`payload.query`** <`string`>:
+  - a `payload` that contains a valid JSON string which itself contains a nested `query` key/value pair where the value is the SQL string. Ex: `msg.payload = "{'query':'<sql string>'}"`
+  - a `payload` object with a nested `query` key/value pair where the value is the SQL string. Ex: `msg.payload.query = '<sql string>'`
+  - a `query` key/value pair where the value is the SQL string. Ex: `msg.query = '<sql string>'`
 
-  A valid SQL query string
+* (optional) **`params`** <`array`>:
+
+An array containing the same number of element that there are `?` in the query string.  The array is optionnal only if there are no variables markers in the query string.
 
 #### Outputs
 
-Sends a message as an `output object` (as defined above) that is the results from the query
+Returns a message containing an `output object` matching the `result to` dot-notation string as described above.
 
 * **`output object`**: <`array`>
 
-  The [`odbc` Result array](https://www.npmjs.com/package/odbc#result-array) returned from the query.
+  The [`odbc` result array](https://www.npmjs.com/package/odbc#result-array) returned from the query.
