@@ -7,7 +7,8 @@ A Node Red implementation of odbc.js (https://www.npmjs.com/package/odbc).  This
 
 This node is an unofficial fork of node-red-contrib-odbc from Mark Irish (https://github.com/markdirish/node-red-contrib-odbc) and vastly inspires from it.  It also takes ideas from node-red-contrib-odbc2 from AIS Automation (https://github.com/AISAutomation/node-red-contrib-odbc2).  Overall changes:
 
-  - Can mustache as well as a parameter array.
+  - Can use mustache as well as a parameter array.
+  - Warnings when mustache will render an undefined variable.
   - Fixes the output field option so that nested object can be used.
   - Fixes the checkbox for the pool shrink option.
   - Uses ace/mode/sql for the SQL input field.

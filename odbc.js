@@ -1,7 +1,7 @@
 module.exports = function(RED) {
   const odbcModule = require('odbc');
   const mustache = require('mustache');
-  const dot = require('set-value');
+  const objPath = require('object-path');
   //----poolConfig is the function associated to the odbc config node.
   function poolConfig(config){
     RED.nodes.createNode(this, config);
@@ -56,8 +56,18 @@ module.exports = function(RED) {
         this.config.outputObj = msg?.output || this.config?.outputObj;
         //---Re-fetching queryString here since it can change because of Mustache even if the node itself doesn't change.
         this.queryString = this.config.query;
-        //---Replace the mustaches tags with the appropriate values from the input msg.
-        this.queryString = mustache.render(this.queryString, msg);        
+        if(this.queryString.length){
+          //---Testing if all mustache tags were provided.
+          for(var parsed of mustache.parse(this.queryString)){
+              if(parsed[0] == "name" || parsed[0] == "&"){
+                  if(!objPath.has(msg, parsed[1])){
+                      this.warn(`mustache parameter "${parsed[1]}" is absent and will render to undefined`);
+                  }
+              }
+          }
+          //---Replace the mustaches tags with the appropriate values from the input msg.
+          this.queryString = mustache.render(this.queryString, msg);    
+        }    
         //----Case were the query is in the message, not in the payload.
         if (msg?.query) this.queryString = msg.query || this.queryString
         //---Handles the case were the received message is a stringified JSON containing a valid query.
@@ -147,7 +157,7 @@ module.exports = function(RED) {
           const result = await this.connection.query(this.queryString, msg?.params);
           if(result){
             //----Sending the results to the defined dot notation object.
-            dot(msg,this.config.outputObj,result);
+            objPath.set(msg,this.config.outputObj,result);
             if(this?.parseSql) msg.parsedSql = this.parseSql;
             this.status({fill:'blue',shape:'dot',text:'finish'});
             send(msg);            
