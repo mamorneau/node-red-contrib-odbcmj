@@ -102,16 +102,16 @@ module.exports = function(RED) {
           this.status({fill: "red", shape: "ring",text: "Invalid query"});
           throw new Error("no query to execute");          
         }
-        if(this.queryString.includes('\?') && !msg?.params){
+        if(this.queryString.includes('\?') && !msg?.parameters){
           this.status({fill: "red", shape: "ring",text: "Invalid statement"});
           throw new Error("the query string includes ? markers but no msg.params was provided");          
         }
-        else if(this.queryString.includes('\?') && !Array.isArray(msg.params)){
+        else if(this.queryString.includes('\?') && !Array.isArray(msg.parameters)){
           this.status({fill: "red", shape: "ring",text: "Invalid statement"});
           throw new Error("the query string includes question marks but msg.params is not an array");          
         }
         if(this.queryString.includes('\?')){
-          if((this.queryString.match(/\?/g) || []).length != msg.params.length){
+          if((this.queryString.match(/\?/g) || []).length != msg.parameters.length){
             this.status({fill: "red", shape: "ring",text: "Invalid statement"});
             throw new Error("the number of parameters provided doesn't match the number of ? markers");          
           }
@@ -154,13 +154,21 @@ module.exports = function(RED) {
         }
         //----Actual attempt to send the query to the ODBC driver.
         try { 
-          const result = await this.connection.query(this.queryString, msg?.params);
+          const result = await this.connection.query(this.queryString, msg?.parameters);
           if(result){
             //----Sending the results to the defined dot notation object.
+            let otherParams = {};
+            for(const [key, value] of Object.entries(result)){
+              if(isNaN(parseInt(key))){
+                 otherParams[key] = value;
+                 delete result[key];
+              }
+            }
             objPath.set(msg,this.config.outputObj,result);
-            if(this?.parseSql) msg.parsedSql = this.parseSql;
+            if(this?.parseSql) msg.parsedQuery = this.parseSql;
+            if(Object.keys(otherParams).length) msg.psql = otherParams;
             this.status({fill:'blue',shape:'dot',text:'finish'});
-            send(msg);            
+            send(msg); 
           } else {
             this.status({fill: "red", shape: "ring",text: "query error"});
             throw new Error("the query returns a falsy");

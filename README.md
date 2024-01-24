@@ -95,7 +95,7 @@ A node that runs a query when input is received. Each instance of the node can d
 
   A valid SQL query string that can optionally contains parameters inserted using the Mustache syntax.  For exemple, msg.payload can be inserted anywhere in the string using triple curly brackets: `{{{payload}}}`.  The node will accept a query that is passed either as msg.query, msg.payload.query or msg.payload if payload is a stringified JSON containing a query key/value pair.  A query string passed from the input will override any query defined in the node properties.  Mustache syntax cannot be used with a query string passed from the input.
 
-  Alternatively, the query string can be constructed as a prepared statement; that is with variables replaced by question marks: `SELECT * FROM test WHERE id = ?`.  The variables must then be passed to the input using `msg.params`.  This object must be an array containing the same number of element that there are `?` in the query string.  The parameters are inserted one by one, from left to right.
+  Alternatively, the query string can be constructed as a prepared statement; that is with variables replaced by question marks: `SELECT * FROM test WHERE id = ?`.  The variables must then be passed to the input using `msg.parameters`.  This object must be an array containing the same number of element that there are `?` in the query string.  The parameters are inserted one by one, from left to right.
 
 * (**required**) **`result to`**: <`dot-notation string`>
 
@@ -117,7 +117,7 @@ The `odbc` node accepts a message input that is either:
   - a `payload` object with a nested `query` key/value pair where the value is the SQL string. Ex: `msg.payload.query = '<sql string>'`
   - a `query` key/value pair where the value is the SQL string. Ex: `msg.query = '<sql string>'`
 
-* (optional) **`params`** <`array`>:
+* (optional) **`parameters`** <`array`>:
 
 An array containing the same number of element that there are `?` in the query string.  The array is optionnal only if there are no variables markers in the query string.
 
@@ -128,3 +128,7 @@ Returns a message containing an `output object` matching the `result to` dot-not
 * **`output object`**: <`array`>
 
   The [`odbc` result array](https://www.npmjs.com/package/odbc#result-array) returned from the query.
+
+* **`psql`**: <`object`>
+
+  Contains any key/value pairs that were in the original output and were the key was not an integer.  The module odbc.js returns a [few useful parameters](https://www.npmjs.com/package/odbc#result-array) but these parameters are not part of the output array and are thus segregated into `msg.psql`.  This is to avoid potential issues if looping through the output array using `Object.entries`.
