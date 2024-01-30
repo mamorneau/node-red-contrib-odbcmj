@@ -166,7 +166,7 @@ module.exports = function(RED) {
             }
             objPath.set(msg,this.config.outputObj,result);
             if(this?.parseSql) msg.parsedQuery = this.parseSql;
-            if(Object.keys(otherParams).length) msg.psql = otherParams;
+            if(Object.keys(otherParams).length) msg.odbc = otherParams;
             this.status({fill:'blue',shape:'dot',text:'finish'});
             send(msg); 
           } else {

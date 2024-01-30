@@ -129,6 +129,6 @@ Returns a message containing an `output object` matching the `result to` dot-not
 
   The [`odbc` result array](https://www.npmjs.com/package/odbc#result-array) returned from the query.
 
-* **`psql`**: <`object`>
+* **`odbc`**: <`object`>
 
-  Contains any key/value pairs that were in the original output and were the key was not an integer.  The module odbc.js returns a [few useful parameters](https://www.npmjs.com/package/odbc#result-array) but these parameters are not part of the output array and are thus segregated into `msg.psql`.  This is to avoid potential issues if looping through the output array using `Object.entries`.
+  Contains any key/value pairs that were in the original output and were the key was not an integer.  The module odbc.js returns a [few useful parameters](https://www.npmjs.com/package/odbc#result-array) but these parameters are not part of the output array and are thus segregated into `msg.odbc`.  This is to avoid potential issues if looping through the output array using `Object.entries`.
