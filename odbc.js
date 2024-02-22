@@ -88,15 +88,17 @@ module.exports = function(RED) {
                 }
               }
             }
+          } else {
+            if (msg?.payload?.query){
+              if(typeof msg.payload.query != 'string'){
+                this.status({fill: "red", shape: "ring",text: "Invalid query"});
+                throw new Error("object msg.payload.query must be a string");
+              } else { this.queryString = msg.payload.query || this.queryString }        
+            }
           }
         }
         //----Case were the query is in the payload, not in the messsage.
-        else if (msg?.payload?.query){
-          if(typeof msg.payload.query != 'string'){
-            this.status({fill: "red", shape: "ring",text: "Invalid query"});
-            throw new Error("object msg.payload.query must be a string");
-          } else { this.queryString = msg.payload.query || this.queryString }        
-        }
+        
         //----Case were there was no query pased to the node.
         if(!this.queryString){
           this.status({fill: "red", shape: "ring",text: "Invalid query"});
